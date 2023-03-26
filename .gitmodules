@@ -1,0 +1,6 @@
+[submodule "vehicle_interfaces"]
+	path = vehicle_interfaces
+	url = git@github.com:cocobird231/RobotVehicle-1.0-ROS2-vehicle_interfaces.git
+[submodule "codePack/vehicle_interfaces"]
+	path = codePack/vehicle_interfaces
+	url = git@github.com:cocobird231/RobotVehicle-1.0-ROS2-vehicle_interfaces.git
