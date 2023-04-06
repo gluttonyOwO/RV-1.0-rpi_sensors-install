@@ -23,6 +23,12 @@ def generate_launch_description():
                     "topic_GPS_topicName" : data['topic_GPS']['topicName'], 
                     "topic_GPS_pubInterval" : data['topic_GPS']['publishInterval'], 
                     "mainNodeName" : data['node_prop']['nodeName'], 
+                    "module" : data['GPS_prop']['module'], 
+                    "caster" : data['GPS_prop']['caster'], 
+                    "port" : data['GPS_prop']['port'], 
+                    "mountpoint" : data['GPS_prop']['mountpoint'], 
+                    "username" : data['GPS_prop']['username'], 
+                    "password" : data['GPS_prop']['password'], 
                 }
             ]
         )

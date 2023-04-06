@@ -1,15 +1,10 @@
 #!/usr/bin/bash
-DRY_RUN=NO
 while [[ $# -gt 0 ]]; do
   case $1 in
     -e|--extension)
       EXTENSION="$2"
       shift # past argument
       shift # past value
-      ;;
-    --dry-run)
-      DRY_RUN=YES
-      shift # past argument
       ;;
     -*|--*)
       echo "Unknown option $1"
@@ -41,23 +36,14 @@ PreparePackage ()
     sed -i "${line_default}r ros2_docker/source_env.txt" ros2_docker/run.sh
     echo "" >> ros2_docker/run.sh
     echo "sudo docker run -v ~/ros2_docker/code/$PACKNAME/launch/common.yaml:/ros2_ws/install/$PACKNAME/share/$PACKNAME/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $PACKNAME launch.py" >> ros2_docker/run.sh
-
-    if [ $DRY_RUN != YES ]
-    then
-        mv ros2_docker ~/ros2_docker
-    fi
+    mv ros2_docker ~/ros2_docker
 }
 
 InstallDockerfile ()
 {
-    if [ $DRY_RUN != YES ]
-    then
-        cd ~/ros2_docker
-    else
-        cd ros2_docker
-    ln code/$PACKNAME/launch/common.yaml common.yaml
-    fi
+    cd ~/ros2_docker
     echo "PWD: $PWD"
+    ln code/$PACKNAME/launch/common.yaml common.yaml
     
     echo "Enter network interface (default eth0):"
     read interface
@@ -86,27 +72,13 @@ InstallDockerfile ()
 
     echo "Installing dockerfile..."
     chmod a+x ./install_docker.sh
-    if [ $DRY_RUN == YES ]
+    if [ "$static_ip" == "NONE" ]
     then
-        if [ "$static_ip" == "NONE" ]
-        then
-            echo "Install with interface: $interface with DHCP"
-            ./install_docker.sh -i $interface --dry-run
-        else
-            echo "Install with interface: $interface with IP: $static_ip"
-            ./install_docker.sh -i $interface --ip $static_ip --dry-run
-        fi
-        cd ..
-        rm -rf ros2_docker
+        echo "Install with interface: $interface with DHCP"
+        ./install_docker.sh -i $interface -p $PACKNAME
     else
-        if [ "$static_ip" == "NONE" ]
-        then
-            echo "Install with interface: $interface with DHCP"
-            ./install_docker.sh -i $interface
-        else
-            echo "Install with interface: $interface with IP: $static_ip"
-            ./install_docker.sh -i $interface --ip $static_ip
-        fi
+        echo "Install with interface: $interface with IP: $static_ip"
+        ./install_docker.sh -i $interface --ip $static_ip -p $PACKNAME
     fi
 }
 
