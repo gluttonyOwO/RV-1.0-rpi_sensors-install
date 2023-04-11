@@ -164,45 +164,48 @@ class NtripClient(object):
                     self.socket.settimeout(10)
                     self.socket.sendall(self.getMountPointBytes())
                     while not found_header:
-                        casterResponse=self.socket.recv(4096) #All the data
-                        # print(casterResponse)
-                        header_lines = casterResponse.decode('utf-8').split("\r\n")
-                        
-# header_lines empty, request fail,exit while loop
-                        for line in header_lines:
-                            if line=="":
-                                if not found_header:
-                                    found_header=True
+                        try:
+                            casterResponse=self.socket.recv(4096) #All the data
+                            # print(casterResponse)
+                            header_lines = casterResponse.decode('ascii').split("\r\n")
+                            
+                            # header_lines empty, request fail,exit while loop
+                            for line in header_lines:
+                                if line=="":
+                                    if not found_header:
+                                        found_header=True
+                                        if self.verbose:
+                                            sys.stderr.write("End Of Header"+"\n")
+                                else:
                                     if self.verbose:
-                                        sys.stderr.write("End Of Header"+"\n")
-                            else:
-                                if self.verbose:
-                                    sys.stderr.write("Header: " + line+"\n")
-                            if self.headerOutput:
-                                self.headerFile.write(line+"\n")
+                                        sys.stderr.write("Header: " + line+"\n")
+                                if self.headerOutput:
+                                    self.headerFile.write(line+"\n")
 
 
 
-#header_lines has content
-                        for line in header_lines:
-                            if line.find("SOURCETABLE")>=0:
-                                sys.stderr.write("Mount point does not exist")
-                                sys.exit(1)
-                            elif line.find("401 Unauthorized")>=0:
-                                sys.stderr.write("Unauthorized request\n")
-                                sys.exit(1)
-                            elif line.find("404 Not Found")>=0:
-                                sys.stderr.write("Mount Point does not exist\n")
-                                sys.exit(2)
-                            elif line.find("ICY 200 OK")>=0:
-                                #Request was valid
-                                self.socket.sendall(self.getGGABytes())
-                            elif line.find("HTTP/1.0 200 OK")>=0:
-                                #Request was valid
-                                self.socket.sendall(self.getGGABytes())
-                            elif line.find("HTTP/1.1 200 OK")>=0:
-                                #Request was valid
-                                self.socket.sendall(self.getGGABytes())
+                            #header_lines has content
+                            for line in header_lines:
+                                if line.find("SOURCETABLE")>=0:
+                                    sys.stderr.write("Mount point does not exist")
+                                    sys.exit(1)
+                                elif line.find("401 Unauthorized")>=0:
+                                    sys.stderr.write("Unauthorized request\n")
+                                    sys.exit(1)
+                                elif line.find("404 Not Found")>=0:
+                                    sys.stderr.write("Mount Point does not exist\n")
+                                    sys.exit(2)
+                                elif line.find("ICY 200 OK")>=0:
+                                    #Request was valid
+                                    self.socket.sendall(self.getGGABytes())
+                                elif line.find("HTTP/1.0 200 OK")>=0:
+                                    #Request was valid
+                                    self.socket.sendall(self.getGGABytes())
+                                elif line.find("HTTP/1.1 200 OK")>=0:
+                                    #Request was valid
+                                    self.socket.sendall(self.getGGABytes())
+                        except:
+                            print('found_header error')
 
 
 
@@ -215,7 +218,7 @@ class NtripClient(object):
                             (raw_data, parsed_data) = self.nmr.read()
                             if bytes("GNGGA",'ascii') in raw_data :
                                 print(raw_data)
-                                tmp = raw_data.split(',')
+                                tmp = raw_data.decode('ascii').split(',')
                                 if (len(tmp) >= 15 and tmp[0] == '$GNGGA'):# Got GNGGA data
                                     '''
                                     GNGGA data: <$GNGGA>, 
@@ -255,7 +258,7 @@ class NtripClient(object):
                             if self.UDP_socket:
                                 self.UDP_socket.sendto(data, ('<broadcast>', self.UDP_Port))
 #                            print datetime.datetime.now()-connectTime
-                            if maxConnectTime :
+                            if self.maxConnectTime :
                                 if datetime.datetime.now() > connectTime+EndConnect:
                                     if self.verbose:
                                         sys.stderr.write("Connection Timed exceeded\n")
@@ -274,6 +277,10 @@ class NtripClient(object):
                             data=False
                         except TypeError as e:
                             print(e)
+                        except ValueError as e:
+                            print(e)
+                        except:
+                            print('Read GNGGA error')
 
                     if self.verbose:
                         sys.stderr.write('Closing Connection\n')

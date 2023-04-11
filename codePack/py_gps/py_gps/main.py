@@ -1,4 +1,5 @@
 import time
+import threading
 
 import rclpy
 from rclpy.node import Node
@@ -68,6 +69,8 @@ class GPSPublisher(Node):
             ntripArgs['caster'] = params.caster
             ntripArgs['port'] = int(params.port)
             ntripArgs['mountpoint'] = params.mountpoint
+            if (ntripArgs['mountpoint'][:1] != "/"):
+                ntripArgs['mountpoint'] = "/" + ntripArgs['mountpoint']
 
             self.ntripCli = NtripClient(**ntripArgs)
             self.ntripCliTh = threading.Thread(target=self.ntripCli.readData, daemon=True)
@@ -117,7 +120,7 @@ class GPSPublisher(Node):
 def main(args=None):
     rclpy.init(args=args)
     params = Params('gps_params_node')
-    gps_publisher = GPSPublisher(params.mainNodeName, params.topic_GPS_topicName, params.topic_GPS_pubInterval)
+    gps_publisher = GPSPublisher(params)
     rclpy.spin(gps_publisher)
 
     gps_publisher.destroy_node()

@@ -89,9 +89,9 @@ class SensePublisher(Node):
         imuMsg.angular_velocity[2] = gyro['z']
 
         acc = self.sense.get_accelerometer_raw()# G
-        imuMsg.linear_acceleration[0] = acc['x'] * 9.80665
-        imuMsg.linear_acceleration[1] = acc['y'] * 9.80665
-        imuMsg.linear_acceleration[2] = acc['z'] * 9.80665
+        imuMsg.linear_acceleration[0] = acc['x']# * 9.80665
+        imuMsg.linear_acceleration[1] = acc['y']# * 9.80665
+        imuMsg.linear_acceleration[2] = acc['z']# * 9.80665
         
         # Environment Msg
         envMsg = Environment()
