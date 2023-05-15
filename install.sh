@@ -16,35 +16,58 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+target_dir="$HOME/ros2_docker"
+
 PreparePackage ()
 {
-    rm -rf ros2_docker
-    mkdir -p ros2_docker/code
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "Right place"
+    else
+        echo "Err: $PWD"
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Now: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
 
-    cp -rv codePack/vehicle_interfaces ros2_docker/code/vehicle_interfaces
-    cp -rv codePack/$PACKNAME ros2_docker/code/$PACKNAME
+    # Store selected module name into .modulename file
+    touch .modulename
+    echo $pack_name > .modulename
 
-    cp ros_entrypoint.sh ros2_docker/ros_entrypoint.sh
-    cp install_docker.sh ros2_docker/install_docker.sh
-    cp Dockerfile ros2_docker/Dockerfile
-    cp run.sh ros2_docker/run.sh
+    # Link requirement file to ~/ros2_docker for Dockerfile installation
+    ln codePack/$pack_name/requirement_apt.txt requirement_apt.txt
+    ln codePack/$pack_name/requirement_pip.txt requirement_pip.txt
+    ln codePack/$pack_name/source_env.txt source_env.txt
 
-    cp codePack/$PACKNAME/requirement_apt.txt ros2_docker/requirement_apt.txt
-    cp codePack/$PACKNAME/requirement_pip.txt ros2_docker/requirement_pip.txt
-    cp codePack/$PACKNAME/source_env.txt ros2_docker/source_env.txt
-    line_default=20
-    sed -i "${line_default}r ros2_docker/source_env.txt" ros2_docker/run.sh
-    echo "" >> ros2_docker/run.sh
-    echo "sudo docker run -v ~/ros2_docker/code/$PACKNAME/launch/common.yaml:/ros2_ws/install/$PACKNAME/share/$PACKNAME/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $PACKNAME launch.py" >> ros2_docker/run.sh
-    mv ros2_docker ~/ros2_docker
+    # Link common.yaml file to ~/ros2_docker for convenient modifying
+    ln codePack/$pack_name/launch/common.yaml common.yaml
+
+    # Recover run.sh if .tmp exist
+    if cat run.sh.tmp &> /dev/null
+    then
+        cp run.sh.tmp run.sh
+        echo "run.sh recovered"
+    else
+        cp run.sh run.sh.tmp
+        echo "Backup run.sh: run.sh.tmp"
+    fi
+    
+    # Modify run.sh by adding specific $pack_name source_env.txt and docker run process
+    cat source_env.txt >> run.sh
+    echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
+    sudo chmod a+x run.sh
 }
 
 InstallDockerfile ()
 {
-    cd ~/ros2_docker
-    echo "PWD: $PWD"
-    ln code/$PACKNAME/launch/common.yaml common.yaml
-    
+    # Network Interface Selection
     echo "Enter network interface (default eth0):"
     read interface
     if [ $interface ]
@@ -55,6 +78,7 @@ InstallDockerfile ()
         echo "Default interface: $interface"
     fi
 
+    # Network IP Selection
     echo "Use DHCP? (y/n):"
     read static_ip
     if [[ "$static_ip" == "y" || "$static_ip" == "Y" ]]
@@ -70,60 +94,190 @@ InstallDockerfile ()
     fi
     echo "Static IP: $static_ip"
 
+    # Install Dockerfile Process
     echo "Installing dockerfile..."
-    chmod a+x ./install_docker.sh
-    if [ "$static_ip" == "NONE" ]
-    then
-        echo "Install with interface: $interface with DHCP"
-        ./install_docker.sh -i $interface -p $PACKNAME
+
+    # Required environment installation and update
+    sudo apt update
+    sudo apt install python3 python3-dev python3-pip git curl -y
+
+    # Check Docker
+    if [ -x "$(command -v docker)" ]; then
+        echo "Found docker." && docker -v
     else
-        echo "Install with interface: $interface with IP: $static_ip"
-        ./install_docker.sh -i $interface --ip $static_ip -p $PACKNAME
+        echo "No docker. Installing docker..."
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
     fi
+
+    # Recover Dockerfile if .tmp exist
+    if cat Dockerfile.tmp &> /dev/null
+    then
+        cp Dockerfile.tmp Dockerfile
+        echo "Dockerfile recovered"
+    else
+        cp Dockerfile Dockerfile.tmp
+        echo "Backup Dockerfile: Dockerfile.tmp"
+    fi
+
+    # Modify Dockerfile by adding requirement list
+    line_default=19
+    sed -i "${line_default}r requirement_apt.txt" Dockerfile
+    echo "RUN . /opt/ros/\${ROS_DISTRO}/setup.sh && colcon build --packages-select $pack_name vehicle_interfaces" >> Dockerfile
+    
+    # Dockerfile Installation
+    sudo docker build -t ros2_docker .
+}
+
+EnvSetting ()
+{
+    # Create ros2_docker.desktop file
+    rm -rf ros2_docker.desktop.tmp && touch ros2_docker.desktop.tmp
+    echo "[Desktop Entry]" >> ros2_docker.desktop.tmp
+    echo "Name=ros2_docker" >> ros2_docker.desktop.tmp
+    echo "Exec=lxterminal -e bash -c '$HOME/ros2_docker/run.sh $interface;\$SHELL'" >> ros2_docker.desktop.tmp
+    echo "Terminal=true" >> ros2_docker.desktop.tmp
+
+    # Copy ros2_docker.desktop to autostart directory
+    sudo cp ros2_docker.desktop.tmp /etc/xdg/autostart/ros2_docker.desktop
+    rm -rf ros2_docker.desktop.tmp
+
+    # Recover /boot/config.txt if .tmp exist
+    if sudo cat /boot/config.txt.tmp &> /dev/null
+    then
+        sudo cp /boot/config.txt.tmp /boot/config.txt
+        echo "/boot/config.txt recovered"
+    else
+        sudo cp /boot/config.txt /boot/config.txt.tmp
+        echo "Backup /boot/config.txt: /boot/config.txt.tmp"
+    fi
+
+    # Modify /boot/config.txt for booting behavior
+    sudo sed -i "s/#hdmi_force_hotplug=1/hdmi_force_hotplug=1/1" /boot/config.txt
+    sudo sed -i "s/#hdmi_group=1/hdmi_group=1/1" /boot/config.txt
+    sudo sed -i "s/#hdmi_mode=1/hdmi_mode=16/1" /boot/config.txt
+    sudo sed -i "s/#hdmi_drive=2/hdmi_drive=2/1" /boot/config.txt
+
+    # Recover /etc/dhcpcd.conf if .tmp exist
+    if sudo cat /etc/dhcpcd.conf.tmp &> /dev/null
+    then
+        sudo cp /etc/dhcpcd.conf.tmp /etc/dhcpcd.conf
+        echo "/etc/dhcpcd.conf recovered"
+    else
+        sudo cp /etc/dhcpcd.conf /etc/dhcpcd.conf.tmp
+        echo "Backup /etc/dhcpcd.conf: /etc/dhcpcd.conf.tmp"
+    fi
+
+    # Modify /etc/dhcpcd.conf for network behavior
+    if [ "$static_ip" != "NONE" ]; then
+        sudo echo "interface $interface" >> /etc/dhcpcd.conf
+        sudo echo "static ip_address=$static_ip" >> /etc/dhcpcd.conf
+    else
+        echo "dhcpcd.conf not changed"
+    fi
+}
+
+UpdateCodePack ()
+{
+    # Check Internet Connection
+    printf "%s" "Internet connecting..."
+    while ! ping -w 1 -c 1 -n 168.95.1.1 &> /dev/null
+    do
+        printf "%c" "."
+    done
+    printf "\n%s\n" "Internet connected."
+
+    # TODO: Git Pull Process
+
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    # Check git
+    if [ -x "$(command -v git)" ]; then
+        echo "Found git." && git --version
+    else
+        echo "No git. Installing git..."
+        # sudo apt install git -y
+    fi
+
+    # Check git control
+    if git status &> /dev/null
+    then
+        echo "git control checked."
+    else
+        echo "git control not found. \
+Delete ros2_docker directory and run \
+'cd ~ && git clone https://github.com/cocobird231/RobotVehicle-1.0-ROS2-rpi_sensors.git ros2_docker' \
+to grab git controlled directory."
+        exit 1
+    fi
+
+    # Update submodules
+    git submodule update --remote --recursive --force
 }
 
 ## Install Menu
 echo "################################################"
-printf "\t\t%s\n\n" "Select Install Package"
-echo "1) GPS module (MAX-M8Q GNSS HAT)"
+printf "\t%s\n\n" "Raspberry Pi Sensor Package Installer"
+echo "1) GPS module (MAX-M8Q GNSS, ZED-F9P HAT)"
 echo "2) SenseHat module (IMU and environment sensors)"
 echo "3) RF Communication module (send and receive)"
-echo "4) Ultrasound module (Three HC-SR04 sensors)"
-echo "5) Webcam module (Based on OpenCV4)"
+echo "4) Ultrasound module (HC-SR04 sensors)"
+echo "5) Webcam module (based on OpenCV4)"
+echo "u) Update (git control required)"
 echo "q) Exit"
 echo "################################################"
-echo "Enter the install package number or press q to exit:"
+echo "Enter number for module installation. Enter 'u' for module update or 'q' to exit:"
 read selectNum
 
 if [ "$selectNum" == "1" ]
 then
     echo "Install GPS module..."
-    PACKNAME="py_gps"
+    pack_name="py_gps"
 elif [ "$selectNum" == "2" ]
 then
     echo "Install SenseHat module..."
-    PACKNAME="py_sense"
+    pack_name="py_sense"
 elif [ "$selectNum" == "3" ]
 then
     echo "Install RF Communication module..."
-    PACKNAME="py_singlerf"
+    pack_name="py_singlerf"
 elif [ "$selectNum" == "4" ]
 then
     echo "Install Ultrasound module..."
-    PACKNAME="py_ultrasound"
+    pack_name="py_ultrasound"
 elif [ "$selectNum" == "5" ]
 then
     echo "Install Webcam module..."
-    PACKNAME="cpp_webcam"
+    pack_name="cpp_webcam"
+elif [ "$selectNum" == "u" ]
+then
+    echo "Updating module..."
+    pack_name="NONE"
+    UpdateCodePack
 else
-    PACKNAME="NONE"
+    pack_name="NONE"
 fi
 
-if [ "$PACKNAME" != "NONE" ]
+if [ "$pack_name" != "NONE" ]
 then
     echo "Preparing package..."
     PreparePackage
     InstallDockerfile
+    EnvSetting
 else
     echo "Process ended."
 fi

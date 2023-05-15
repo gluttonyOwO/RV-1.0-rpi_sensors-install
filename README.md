@@ -1,6 +1,12 @@
 # rpi_sensors
 
+*`Updated: 2023/04/18`*
+
 Web version: https://hackmd.io/@cocobird231/BJidBuC6i
+
+:::    warning
+**Guidance for hardware installation:** [rpi_sensors Hardware Installation](https://hackmd.io/@cocobird231/rkUS37lKc)
+:::
 
 The sensor installation pack for Raspberry Pi 4. The installation will detect and install Docker automatically. The ROS2 environment is based on Docker.
 
@@ -8,21 +14,26 @@ System requirements:
 - OS: Raspberry Pi OS (64-bit recommend)
 - RAM: 4G or higher
 
+:::info
+[How to write Raspberry Pi OS into SD card?](https://hackmd.io/@cocobird231/S1eCXHR6i)
+:::
+
 Automatically installed:
 - Docker
 - ROS2: Humble distro (official Dockerfile)
 
 Now supported sensor types:
-- GPS module (MAX-M8Q GNSS HAT)
+- GPS module (MAX-M8Q GNSS, ZED-F9P HAT)
 - SenseHat module (IMU and environment sensors)
 - RF Communication module (send and receive)
 - Ultrasound module (Three HC-SR04 sensors)
 - Webcam module (Based on OpenCV4)
 
 :::warning
-The following picture was demonstrated as webcam module installation.
+The following instructions use webcam module installation as an example.
 :::
 
+---
 ## Usage
 
 ### For New Raspberry Pi 4 Device (no rpi_sensors installed)
@@ -50,9 +61,8 @@ The following step is for the Raspberry Pi 4 that has been installed rpi_sensors
 1. Copy code directory under `rpi_sensors/codePack` to `~/ros2_docker/codePack` (e.g. `cp -r rpi_sensors/cpp_webcam ~/ros2_docker/codePack/`)
 2. Open `Terminal` under `~/ros2_docker` and run `. install_docker.sh -i INTERFACE`, the `INTERFACE` can be `eth0` or `wlan0`
 ![](https://i.imgur.com/mDoPED2.png)
-3. Modify the sensor settings under `~/ros2_docker/codePack/{PACKAGE}/launch/common.yaml` and reboot device.
 
-
+---
 ### Sensor ROS2 Parameters Setting
 Settings may be varient in different sensors, but there are some common parameters need to be changed:
 1. Device node name (#primary tag)
