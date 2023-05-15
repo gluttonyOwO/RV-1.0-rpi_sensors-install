@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ADD ros_entrypoint.sh /
 RUN chmod a+x ros_entrypoint.sh
 RUN mkdir -p ros2_ws/src
-COPY code/ /ros2_ws/src/
+COPY codePack/ /ros2_ws/src/
 WORKDIR /ros2_ws
 
 #RUN . /opt/ros/${ROS_DISTRO}/setup.sh && colcon build

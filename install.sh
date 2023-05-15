@@ -23,13 +23,12 @@ PreparePackage ()
     # Check pwd
     if [ "$PWD" == "$target_dir" ]
     then
-        echo "Right place"
+        echo "In $target_dir"
     else
-        echo "Err: $PWD"
         if ls $target_dir &> /dev/null
         then
             cd $target_dir
-            echo "Now: $PWD"
+            echo "Change directory: $PWD"
         else
             echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
             exit 1
@@ -42,9 +41,9 @@ PreparePackage ()
     echo $pack_name > .modulename
 
     # Link requirement file to ~/ros2_docker for Dockerfile installation
-    ln codePack/$pack_name/requirement_apt.txt requirement_apt.txt
-    ln codePack/$pack_name/requirement_pip.txt requirement_pip.txt
-    ln codePack/$pack_name/source_env.txt source_env.txt
+    rm -rf requirement_apt.txt && ln codePack/$pack_name/requirement_apt.txt requirement_apt.txt
+    rm -rf requirement_pip.txt && ln codePack/$pack_name/requirement_pip.txt requirement_pip.txt
+    rm -rf source_env.txt && ln codePack/$pack_name/source_env.txt source_env.txt
 
     # Link common.yaml file to ~/ros2_docker for convenient modifying
     ln codePack/$pack_name/launch/common.yaml common.yaml
@@ -63,10 +62,7 @@ PreparePackage ()
     cat source_env.txt >> run.sh
     echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
     sudo chmod a+x run.sh
-}
 
-InstallDockerfile ()
-{
     # Network Interface Selection
     echo "Enter network interface (default eth0):"
     read interface
@@ -94,6 +90,15 @@ InstallDockerfile ()
     fi
     echo "Static IP: $static_ip"
 
+    # Stored selected interface and ip
+    touch .moduleinterface
+    echo $interface > .moduleinterface
+    touch .moduleip
+    echo $static_ip > .moduleip
+}
+
+InstallDockerfile ()
+{
     # Install Dockerfile Process
     echo "Installing dockerfile..."
 
@@ -187,8 +192,6 @@ UpdateCodePack ()
     done
     printf "\n%s\n" "Internet connected."
 
-    # TODO: Git Pull Process
-
     # Check pwd
     if [ "$PWD" == "$target_dir" ]
     then
@@ -227,6 +230,37 @@ to grab git controlled directory."
 
     # Update submodules
     git submodule update --remote --recursive --force
+
+    # Check previous module setting
+    if cat .modulename &> /dev/null
+    then
+        pack_name=$(cat .modulename)
+        echo "Found module name: $pack_name"
+    else
+        echo ".modulename not found. Run install.sh and select number to install module."
+        exit 1
+    fi
+
+    if cat .moduleinterface &> /dev/null
+    then
+        interface=$(cat .moduleinterface)
+        echo "Found module interface: $interface"
+    else
+        echo ".moduleinterface not found. Run install.sh and select number to install module."
+        exit 1
+    fi
+    
+    if cat .moduleip &> /dev/null
+    then
+        static_ip=$(cat .moduleip)
+        echo "Found module ip: $static_ip"
+    else
+        echo ".moduleip not found. Run install.sh and select number to install module."
+        exit 1
+    fi
+
+    # Update module
+    InstallDockerfile
 }
 
 ## Install Menu
@@ -237,7 +271,7 @@ echo "2) SenseHat module (IMU and environment sensors)"
 echo "3) RF Communication module (send and receive)"
 echo "4) Ultrasound module (HC-SR04 sensors)"
 echo "5) Webcam module (based on OpenCV4)"
-echo "u) Update (git control required)"
+echo "u) Update module (git control required)"
 echo "q) Exit"
 echo "################################################"
 echo "Enter number for module installation. Enter 'u' for module update or 'q' to exit:"
@@ -268,6 +302,7 @@ then
     echo "Updating module..."
     pack_name="NONE"
     UpdateCodePack
+    pack_name="NONE"
 else
     pack_name="NONE"
 fi

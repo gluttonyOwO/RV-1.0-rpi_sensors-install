@@ -1,3 +1,3 @@
 [submodule "codePack"]
 	path = codePack
-	url = git@github.com:cocobird231/RobotVehicle-1.0-ROS2-rpi_sensors-codepack.git
+	url = https://github.com/cocobird231/RobotVehicle-1.0-ROS2-rpi_sensors-codepack.git
