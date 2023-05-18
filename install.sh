@@ -46,7 +46,7 @@ PreparePackage ()
     rm -rf source_env.txt && ln codePack/$pack_name/source_env.txt source_env.txt
 
     # Link common.yaml file to ~/ros2_docker for convenient modifying
-    ln codePack/$pack_name/launch/common.yaml common.yaml
+    rm -rf common.yaml && ln codePack/$pack_name/launch/common.yaml common.yaml
 
     # Recover run.sh if .tmp exist
     if cat run.sh.tmp &> /dev/null
