@@ -1,10 +1,36 @@
 #!/usr/bin/bash
+target_dir="$HOME/ros2_docker"
+
+PARSER_UPDATE="NONE"
+PARSER_INSTALL="NONE"
+pack_name="NONE"
+static_ip="NONE"
+interface="eth0"
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -e|--extension)
       EXTENSION="$2"
       shift # past argument
       shift # past value
+      ;;
+    -i|--install)
+      PARSER_INSTALL="install"
+      pack_name="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --reinstall)
+      PARSER_INSTALL="reinstall"
+      shift # past argument
+      ;;
+    --forced_update)
+      PARSER_UPDATE="forced_update"
+      shift # past argument
+      ;;
+    --preserved_update)
+      PARSER_UPDATE="preserved_update"
+      shift # past argument
       ;;
     -*|--*)
       echo "Unknown option $1"
@@ -16,7 +42,139 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-target_dir="$HOME/ros2_docker"
+CheckCurrentModule ()
+{
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    # Check previous module setting
+    if cat .modulename &> /dev/null
+    then
+        pack_name=$(cat .modulename)
+        echo "Found module name: $pack_name"
+    else
+        echo ".modulename not found. Run install.sh and select number to install module."
+        exit 1
+    fi
+
+    if cat .moduleinterface &> /dev/null
+    then
+        interface=$(cat .moduleinterface)
+        echo "Found module interface: $interface"
+    else
+        echo ".moduleinterface not found. Run install.sh and select number to install module."
+        exit 1
+    fi
+    
+    if cat .moduleip &> /dev/null
+    then
+        static_ip=$(cat .moduleip)
+        echo "Found module ip: $static_ip"
+    else
+        echo ".moduleip not found. Run install.sh and select number to install module."
+        exit 1
+    fi
+}
+
+SaveCurrentModule ()
+{
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    # Store selected module name, interface and ip into files
+    touch .modulename
+    echo $pack_name > .modulename
+    touch .moduleinterface
+    echo $interface > .moduleinterface
+    touch .moduleip
+    echo $static_ip > .moduleip
+}
+
+CheckParser ()
+{
+    # Check Internet Connection
+    printf "%s" "Internet connecting..."
+    while ! ping -w 1 -c 1 -n 168.95.1.1 &> /dev/null
+    do
+        printf "%c" "."
+    done
+    printf "\n%s\n" "Internet connected."
+
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    # Update
+    if [ "$PARSER_UPDATE" == "forced_update" ]
+    then
+        git submodule update --remote --recursive --force
+    elif [ "$PARSER_UPDATE" == "preserved_update" ]
+    then
+        # Check previous module setting
+        if cat .modulename &> /dev/null
+        then
+            pack_name=$(cat .modulename)
+            cp codePack/$pack_name/launch/common.yaml common.yaml.tmp
+            git submodule update --remote --recursive --force
+            mv common.yaml.tmp codePack/$pack_name/launch/common.yaml
+        else
+            echo ".modulename not found. common.yaml will not preserved."
+            git submodule update --remote --recursive --force
+        fi
+    fi
+
+    if [ "$PARSER_INSTALL" == "reinstall" ]
+    then
+        # Get current module info
+        CheckCurrentModule
+        # Install
+        InstallDockerfile
+    elif [ "$PARSER_INSTALL" == "install" ]
+    then
+        # Save module info
+        SaveCurrentModule
+        # Install
+        InstallDockerfile
+    fi
+}
 
 PreparePackage ()
 {
@@ -35,33 +193,6 @@ PreparePackage ()
         fi
     fi
     # pwd in ~/ros2_docker
-
-    # Store selected module name into .modulename file
-    touch .modulename
-    echo $pack_name > .modulename
-
-    # Link requirement file to ~/ros2_docker for Dockerfile installation
-    rm -rf requirement_apt.txt && ln codePack/$pack_name/requirement_apt.txt requirement_apt.txt
-    rm -rf requirement_pip.txt && ln codePack/$pack_name/requirement_pip.txt requirement_pip.txt
-    rm -rf source_env.txt && ln codePack/$pack_name/source_env.txt source_env.txt
-
-    # Link common.yaml file to ~/ros2_docker for convenient modifying
-    rm -rf common.yaml && ln codePack/$pack_name/launch/common.yaml common.yaml
-
-    # Recover run.sh if .tmp exist
-    if cat run.sh.tmp &> /dev/null
-    then
-        cp run.sh.tmp run.sh
-        echo "run.sh recovered"
-    else
-        cp run.sh run.sh.tmp
-        echo "Backup run.sh: run.sh.tmp"
-    fi
-    
-    # Modify run.sh by adding specific $pack_name source_env.txt and docker run process
-    cat source_env.txt >> run.sh
-    echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
-    sudo chmod a+x run.sh
 
     # Network Interface Selection
     echo "Enter network interface (default eth0):"
@@ -90,15 +221,52 @@ PreparePackage ()
     fi
     echo "Static IP: $static_ip"
 
-    # Stored selected interface and ip
-    touch .moduleinterface
-    echo $interface > .moduleinterface
-    touch .moduleip
-    echo $static_ip > .moduleip
+    # Save module info
+    SaveCurrentModule
 }
 
 InstallDockerfile ()
 {
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    # Link requirement file to ~/ros2_docker for Dockerfile installation
+    rm -rf requirement_apt.txt && ln codePack/$pack_name/requirement_apt.txt requirement_apt.txt
+    rm -rf requirement_pip.txt && ln codePack/$pack_name/requirement_pip.txt requirement_pip.txt
+    rm -rf source_env.txt && ln codePack/$pack_name/source_env.txt source_env.txt
+
+    # Link common.yaml file to ~/ros2_docker for convenient modifying
+    rm -rf common.yaml && ln codePack/$pack_name/launch/common.yaml common.yaml
+
+    # Recover run.sh if .tmp exist
+    if cat run.sh.tmp &> /dev/null
+    then
+        cp run.sh.tmp run.sh
+        echo "run.sh recovered"
+    else
+        cp run.sh run.sh.tmp
+        echo "Backup run.sh: run.sh.tmp"
+    fi
+    
+    # Modify run.sh by adding specific $pack_name source_env.txt and docker run process
+    cat source_env.txt >> run.sh
+    echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
+    sudo chmod a+x run.sh
+
+
     # Install Dockerfile Process
     echo "Installing dockerfile..."
 
@@ -228,39 +396,31 @@ to grab git controlled directory."
         exit 1
     fi
 
+    # Ask if preserve common.yaml file
+    echo "Preserve current common.yaml file ?(y/n):"
+    read selectNum
+    if [ "$selectNum" == "y" ]
+    then
+        # Check previous module setting
+        if cat .modulename &> /dev/null
+        then
+            pack_name=$(cat .modulename)
+            cp codePack/$pack_name/launch/common.yaml common.yaml.tmp
+        else
+            echo ".modulename not found. common.yaml will not preserved."
+            selectNum="n"
+        fi
+    fi
+
     # Update submodules
     git submodule update --remote --recursive --force
 
-    # Check previous module setting
-    if cat .modulename &> /dev/null
+    # Recovering common.yaml
+    if [ "$selectNum" == "y" ]
     then
-        pack_name=$(cat .modulename)
-        echo "Found module name: $pack_name"
-    else
-        echo ".modulename not found. Run install.sh and select number to install module."
-        exit 1
+        mv common.yaml.tmp codePack/$pack_name/launch/common.yaml
+        echo "common.yaml recovered."
     fi
-
-    if cat .moduleinterface &> /dev/null
-    then
-        interface=$(cat .moduleinterface)
-        echo "Found module interface: $interface"
-    else
-        echo ".moduleinterface not found. Run install.sh and select number to install module."
-        exit 1
-    fi
-    
-    if cat .moduleip &> /dev/null
-    then
-        static_ip=$(cat .moduleip)
-        echo "Found module ip: $static_ip"
-    else
-        echo ".moduleip not found. Run install.sh and select number to install module."
-        exit 1
-    fi
-
-    # Update module
-    InstallDockerfile
 }
 
 ## Install Menu
@@ -271,7 +431,7 @@ echo "2) SenseHat module (IMU and environment sensors)"
 echo "3) RF Communication module (send and receive)"
 echo "4) Ultrasound module (HC-SR04 sensors)"
 echo "5) Webcam module (based on OpenCV4)"
-echo "u) Update module (git control required)"
+echo "u) Update codePack (git control required)"
 echo "q) Exit"
 echo "################################################"
 echo "Enter number for module installation. Enter 'u' for module update or 'q' to exit:"
@@ -302,6 +462,8 @@ then
     echo "Updating module..."
     pack_name="NONE"
     UpdateCodePack
+    CheckCurrentModule
+    InstallDockerfile
     pack_name="NONE"
 else
     pack_name="NONE"
