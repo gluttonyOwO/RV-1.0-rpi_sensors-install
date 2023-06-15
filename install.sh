@@ -6,36 +6,52 @@ PARSER_INSTALL="NONE"
 pack_name="NONE"
 static_ip="NONE"
 interface="eth0"
+non_docker="FALSE"
 
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    -e|--extension)
-      EXTENSION="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -i|--install)
-      PARSER_INSTALL="install"
-      pack_name="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    --reinstall)
-      PARSER_INSTALL="reinstall"
-      shift # past argument
-      ;;
-    --forced_update)
-      PARSER_UPDATE="forced_update"
-      shift # past argument
-      ;;
-    --preserved_update)
-      PARSER_UPDATE="preserved_update"
-      shift # past argument
-      ;;
-    -*|--*)
-      echo "Unknown option $1"
-      exit 0
-      ;;
+    case $1 in
+        -e|--extension)
+            EXTENSION="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        -i|--install)
+            PARSER_INSTALL="install"
+            pack_name="$2"
+            # Check is docker
+            if [ "$pack_name" == "webrtc" ]
+            then
+                non_docker="TRUE"
+            fi
+            shift # past argument
+            shift # past value
+            ;;
+        --interface)
+            interface="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        --ip)
+            static_ip="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        --reinstall)
+            PARSER_INSTALL="reinstall"
+            shift # past argument
+            ;;
+        --forced_update)
+            PARSER_UPDATE="forced_update"
+            shift # past argument
+            ;;
+        --preserved_update)
+            PARSER_UPDATE="preserved_update"
+            shift # past argument
+            ;;
+        -*|--*)
+            echo "Unknown option $1"
+            exit 0
+            ;;
     *)
       shift # past argument
       ;;
@@ -166,13 +182,13 @@ CheckParser ()
         # Get current module info
         CheckCurrentModule
         # Install
-        InstallDockerfile
+        InstallScript
     elif [ "$PARSER_INSTALL" == "install" ]
     then
         # Save module info
         SaveCurrentModule
         # Install
-        InstallDockerfile
+        InstallScript
     fi
 }
 
@@ -225,7 +241,78 @@ PreparePackage ()
     SaveCurrentModule
 }
 
-InstallDockerfile ()
+InstallScript ()
+{
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    # Recover run.sh if .tmp exist
+    if cat run.sh.tmp &> /dev/null
+    then
+        cp run.sh.tmp run.sh
+        echo "run.sh recovered"
+    else
+        cp run.sh run.sh.tmp
+        echo "Backup run.sh: run.sh.tmp"
+    fi
+
+    if [ "$non_docker" == "TRUE" ]
+    then
+        InstallNonDocker
+    else
+        InstallDocker
+    fi
+}
+
+# Must have install.sh script located at $target_dir/codePack/$pack_name/install.sh
+InstallNonDocker()
+{
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    rm -rf run.sh && ln codePack/$pack_name/run.sh run.sh
+    sudo chmod a+x run.sh
+
+    # Required environment installation and update
+    sudo apt update
+    sudo apt install python3 python3-dev python3-pip git curl -y
+
+    # Install the requirement files linked from each module's code pack
+    xargs sudo apt install < requirement_apt.txt
+    python3 -m pip install requirement_pip.txt
+
+    # Run install.sh script
+    sudo chmod a+x codePack/$pack_name/install.sh
+    ./codePack/$pack_name/install.sh $PWD/codePack/$pack_name
+}
+
+InstallDocker()
 {
     # Check pwd
     if [ "$PWD" == "$target_dir" ]
@@ -251,21 +338,11 @@ InstallDockerfile ()
     # Link common.yaml file to ~/ros2_docker for convenient modifying
     rm -rf common.yaml && ln codePack/$pack_name/launch/common.yaml common.yaml
 
-    # Recover run.sh if .tmp exist
-    if cat run.sh.tmp &> /dev/null
-    then
-        cp run.sh.tmp run.sh
-        echo "run.sh recovered"
-    else
-        cp run.sh run.sh.tmp
-        echo "Backup run.sh: run.sh.tmp"
-    fi
-    
-    # Modify run.sh by adding specific $pack_name source_env.txt and docker run process
+    # Modify run.sh by adding specific $pack_name source_env.txt
     cat source_env.txt >> run.sh
-    echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
     sudo chmod a+x run.sh
-
+    # Add docker run process
+    echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
 
     # Install Dockerfile Process
     echo "Installing dockerfile..."
@@ -397,8 +474,7 @@ to grab git controlled directory."
     fi
 
     # Ask if preserve common.yaml file
-    echo "Preserve current common.yaml file ?(y/n):"
-    read selectNum
+    read -p "Preserve current common.yaml file ?(y/n):" selectNum
     if [ "$selectNum" == "y" ]
     then
         # Check previous module setting
@@ -431,6 +507,7 @@ echo "2) SenseHat module (IMU and environment sensors)"
 echo "3) RF Communication module (send and receive)"
 echo "4) Ultrasound module (HC-SR04 sensors)"
 echo "5) Webcam module (based on OpenCV4)"
+echo "6) WebRTC module (GStreamer)"
 echo "u) Update codePack (git control required)"
 echo "q) Exit"
 echo "################################################"
@@ -457,13 +534,18 @@ elif [ "$selectNum" == "5" ]
 then
     echo "Install Webcam module..."
     pack_name="cpp_webcam"
+elif [ "$selectNum" == "6" ]
+then
+    echo "Install WebRTC module..."
+    pack_name="webrtc"
+    non_docker="TRUE"
 elif [ "$selectNum" == "u" ]
 then
     echo "Updating module..."
     pack_name="NONE"
     UpdateCodePack
     CheckCurrentModule
-    InstallDockerfile
+    InstallScript
     pack_name="NONE"
 else
     pack_name="NONE"
@@ -473,7 +555,7 @@ if [ "$pack_name" != "NONE" ]
 then
     echo "Preparing package..."
     PreparePackage
-    InstallDockerfile
+    InstallScript
     EnvSetting
 else
     echo "Process ended."
