@@ -1,6 +1,6 @@
 # rpi_sensors
 
-*`Updated: 2023/05/17`*
+*`Updated: 2023/07/21`*
 
 Web version: https://hackmd.io/@cocobird231/BJidBuC6i
 
@@ -33,21 +33,29 @@ The following image instructions use webcam module installation as an example.
 ## Usage
 
 ### For Newly Install (No `ros2_docker` Under Home Path)
-Run the script`get_rpi_sensors.sh` to grab git controlled SensorPack directory (renamed as ros2_docker). **Make sure Raspberry Pi 4 is connected to the internet before installation.**
+Run the script`get-rpi-sensors-install.sh` to grab git controlled SensorPack directory (renamed as ros2_docker). **Make sure Raspberry Pi 4 is connected to the internet before installation.** There are **two** ways to run the installation script: 
 
-1. Run the script `get_rpi_sensors.sh`. The new directory `ros2_docker` will be created under `$HOME`.
+1. **Run the script `get-rpi-sensors-install.sh` manually**
     ```bash
-    $. get_rpi_sensors.sh
+    . get-rpi-sensors-install.sh
     ```
+2. **Run the script using `curl`**
+    ```bash
+    curl -fsSL ftp://61.220.23.239/rv-10/get-rpi-sensors-install.sh | bash
+    ```
+The new directory `ros2_docker` will be created under `$HOME`.
 
-### Module Program Installation
+### Module Installation
 
 1. Run the script `install.sh` under `ros2_docker` to install program for selected module.
     ```bash
-    $. install.sh
-    
-    # Select a number for module installation
+    cd ~/ros2_docker
     ```
+    
+    ```bash
+    . install.sh
+    ```
+    Select a number for module installation
 2. Determine the network interface and IP for program to executing.
 3. Reboot while installation finished. The program will be running at startup.
 
@@ -75,10 +83,10 @@ Run the script`get_rpi_sensors.sh` to grab git controlled SensorPack directory (
 :::
 
 
-### Module Program Code Update
+### Module Update
 1. Run the script `install.sh` under `ros2_docker` directory and enter `u` for update process.
     ```bash
-    $. install.sh
+    . install.sh
     
     # Enter 'u' for update process
     ```
@@ -86,11 +94,51 @@ Run the script`get_rpi_sensors.sh` to grab git controlled SensorPack directory (
 3. After pulling, the module program will start rebuilding if module program had been installed before.
 
 ---
-### Module Parameters Setting for ROS2
+### Parameters Setting for ROS2
 Settings may be varient in different sensors, but there are some common parameters need to be changed:
-1. Device node name (#primary tag)
-2. Topic name (may be one or more)
-3. Publish interval (Need to be float, e.g. not `1` but `1.0`)
+1. Device node name (under generic_prop tag)
+2. Device ID (under generic_prop tag)
+3. Topic name (may be one or more)
+4. Publish interval (Need to be float, e.g. not `1` but `1.0`)
 
 Modify the settings under `~/ros2_docker/common.yaml` and reboot device.
-![](https://i.imgur.com/BBYVW08.png)
+![](https://hackmd.io/_uploads/r1hIHqD9h.png)
+
+
+### Module Removal
+The current version of installation script does not support the removal option. The file must be removed by hand.
+1. Remove `$HOME/ros2_docker`
+    ```bash
+    rm -rf ~/ros2_docker
+    ```
+2. Remove start-up file
+    ```bash
+    sudo rm -rf /etc/xdg/autostart/ros2_docker.desktop
+    ```
+3. Recovered system configuration files
+    ```bash
+    sudo mv /boot/config.txt.tmp /boot/config.txt
+    ```
+    ```bash
+    sudo mv /etc/dhcpcd.conf.tmp /etc/dhcpcd.conf
+    ```
+4. Remove docker image (option)
+    check container
+    ```bash
+    sudo docker ps -a
+    ```
+    stop and delete container if running
+    ```bash
+    sudo docker stop <container_id>
+    ```
+    ```bash
+    sudo docker rm <container_id>
+    ```
+    check images
+    ```bash
+    sudo docker images
+    ```
+    delete image
+    ```bash
+    sudo docker rmi <image_id>
+    ```

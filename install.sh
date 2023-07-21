@@ -468,7 +468,7 @@ UpdateCodePack ()
     else
         echo "git control not found. \
 Delete ros2_docker directory and run \
-'cd ~ && git clone https://github.com/cocobird231/RobotVehicle-1.0-ROS2-rpi_sensors.git ros2_docker' \
+'cd ~ && git clone https://github.com/davidweitaiwan/RV-1.0-rpi_sensors-install.git ros2_docker' \
 to grab git controlled directory."
         exit 1
     fi
