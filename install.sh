@@ -10,11 +10,6 @@ non_docker="FALSE"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -e|--extension)
-            EXTENSION="$2"
-            shift # past argument
-            shift # past value
-            ;;
         -i|--install)
             PARSER_INSTALL="install"
             pack_name="$2"
@@ -36,8 +31,8 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             shift # past value
             ;;
-        --reinstall)
-            PARSER_INSTALL="reinstall"
+        --remove)
+            PARSER_INSTALL="remove"
             shift # past argument
             ;;
         --forced_update)
@@ -57,6 +52,67 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+CheckParser ()
+{
+    # Check Internet Connection
+    printf "%s" "Internet connecting..."
+    while ! ping -w 1 -c 1 -n 168.95.1.1 &> /dev/null
+    do
+        printf "%c" "."
+    done
+    printf "\n%s\n" "Internet connected."
+
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+
+    # Update
+    if [ "$PARSER_UPDATE" == "forced_update" ]
+    then
+        CheckCurrentModule
+        git submodule update --init --remote --recursive --force
+        InstallScript
+    elif [ "$PARSER_UPDATE" == "preserved_update" ]
+    then
+        CheckCurrentModule
+        cp codePack/$pack_name/launch/common.yaml common.yaml.tmp
+        git submodule update --init --remote --recursive --force
+        mv common.yaml.tmp codePack/$pack_name/launch/common.yaml
+        InstallScript
+    fi
+
+    if [ "$PARSER_INSTALL" == "remove" ]
+    then
+        # Get current module info
+        # CheckCurrentModule
+        # Install
+        # InstallScript
+        # Environment setting
+        # EnvSetting
+        Remove
+    elif [ "$PARSER_INSTALL" == "install" ]
+    then
+        # Save module info
+        SaveCurrentModule
+        # Install
+        InstallScript
+        # Environment setting
+        EnvSetting
+    fi
+}
 
 CheckCurrentModule ()
 {
@@ -132,68 +188,9 @@ SaveCurrentModule ()
     echo $static_ip > .moduleip
 }
 
-CheckParser ()
-{
-    # Check Internet Connection
-    printf "%s" "Internet connecting..."
-    while ! ping -w 1 -c 1 -n 168.95.1.1 &> /dev/null
-    do
-        printf "%c" "."
-    done
-    printf "\n%s\n" "Internet connected."
-
-    # Check pwd
-    if [ "$PWD" == "$target_dir" ]
-    then
-        echo "In $target_dir"
-    else
-        if ls $target_dir &> /dev/null
-        then
-            cd $target_dir
-            echo "Change directory: $PWD"
-        else
-            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
-            exit 1
-        fi
-    fi
-    # pwd in ~/ros2_docker
-
-    # Update
-    if [ "$PARSER_UPDATE" == "forced_update" ]
-    then
-        git submodule update --remote --recursive --force
-    elif [ "$PARSER_UPDATE" == "preserved_update" ]
-    then
-        # Check previous module setting
-        if cat .modulename &> /dev/null
-        then
-            pack_name=$(cat .modulename)
-            cp codePack/$pack_name/launch/common.yaml common.yaml.tmp
-            git submodule update --remote --recursive --force
-            mv common.yaml.tmp codePack/$pack_name/launch/common.yaml
-        else
-            echo ".modulename not found. common.yaml will not preserved."
-            git submodule update --remote --recursive --force
-        fi
-    fi
-
-    if [ "$PARSER_INSTALL" == "reinstall" ]
-    then
-        # Get current module info
-        CheckCurrentModule
-        # Install
-        InstallScript
-    elif [ "$PARSER_INSTALL" == "install" ]
-    then
-        # Save module info
-        SaveCurrentModule
-        # Install
-        InstallScript
-    fi
-}
-
 PreparePackage ()
 {
+    echo "===Prepare Packages==="
     # Check pwd
     if [ "$PWD" == "$target_dir" ]
     then
@@ -243,6 +240,7 @@ PreparePackage ()
 
 InstallScript ()
 {
+    echo "===Install Process==="
     # Check pwd
     if [ "$PWD" == "$target_dir" ]
     then
@@ -280,6 +278,7 @@ InstallScript ()
 # Must have install.sh script located at $target_dir/codePack/$pack_name/install.sh
 InstallNonDocker()
 {
+    echo "===Install Process==="
     # Check pwd
     if [ "$PWD" == "$target_dir" ]
     then
@@ -314,6 +313,7 @@ InstallNonDocker()
 
 InstallDocker()
 {
+    echo "===Install Process==="
     # Check pwd
     if [ "$PWD" == "$target_dir" ]
     then
@@ -381,6 +381,7 @@ InstallDocker()
 
 EnvSetting ()
 {
+    echo "===Environment Setting==="
     # Create ros2_docker.desktop file
     rm -rf ros2_docker.desktop.tmp && touch ros2_docker.desktop.tmp
     echo "[Desktop Entry]" >> ros2_docker.desktop.tmp
@@ -429,6 +430,7 @@ EnvSetting ()
 
 UpdateCodePack ()
 {
+    echo "===Update Process==="
     # Check Internet Connection
     printf "%s" "Internet connecting..."
     while ! ping -w 1 -c 1 -n 168.95.1.1 &> /dev/null
@@ -498,6 +500,72 @@ to grab git controlled directory."
         echo "common.yaml recovered."
     fi
 }
+
+Remove ()
+{
+    echo "===Remove Process==="
+    # Check pwd
+    if [ "$PWD" == "$target_dir" ]
+    then
+        echo "In $target_dir"
+    else
+        if ls $target_dir &> /dev/null
+        then
+            cd $target_dir
+            echo "Change directory: $PWD"
+        else
+            echo "ros2_docker path error. Please copy ros2_docker directory under $HOME"
+            exit 1
+        fi
+    fi
+    # pwd in ~/ros2_docker
+    
+    # Target files
+    rm -rf requirement_apt.txt
+    rm -rf requirement_pip.txt
+    rm -rf source_env.txt
+    rm -rf common.yaml
+    rm -rf ros2_docker.desktop.tmp
+    rm -rf .module*
+    
+    # Recover Dockerfile if .tmp exist
+    if cat Dockerfile.tmp &> /dev/null
+    then
+        mv Dockerfile.tmp Dockerfile
+        echo "Dockerfile recovered"
+    fi
+    
+    # Recover run.sh if .tmp exist
+    if cat run.sh.tmp &> /dev/null
+    then
+        mv run.sh.tmp run.sh
+        echo "run.sh recovered"
+    fi
+    
+    # System files
+    sudo rm -rf /etc/xdg/autostart/ros2_docker.desktop
+    
+    # Recover /boot/config.txt if .tmp exist
+    if sudo cat /boot/config.txt.tmp &> /dev/null
+    then
+        sudo mv /boot/config.txt.tmp /boot/config.txt
+        echo "/boot/config.txt recovered"
+    fi
+    
+    # Recover /etc/dhcpcd.conf if .tmp exist
+    if sudo cat /etc/dhcpcd.conf.tmp &> /dev/null
+    then
+        sudo mv /etc/dhcpcd.conf.tmp /etc/dhcpcd.conf
+        echo "/etc/dhcpcd.conf recovered"
+    fi
+    exit 0
+}
+
+CheckParser
+if [ "$pack_name" != "NONE" ]
+then
+    exit 0
+fi
 
 ## Install Menu
 echo "################################################"
