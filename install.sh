@@ -35,12 +35,12 @@ while [[ $# -gt 0 ]]; do
             PARSER_INSTALL="remove"
             shift # past argument
             ;;
-        --forced_update)
-            PARSER_UPDATE="forced_update"
+        --force-update)
+            PARSER_UPDATE="force-update"
             shift # past argument
             ;;
-        --preserved_update)
-            PARSER_UPDATE="preserved_update"
+        --preserve-update)
+            PARSER_UPDATE="preserve-update"
             shift # past argument
             ;;
         -*|--*)
@@ -80,12 +80,12 @@ CheckParser ()
     # pwd in ~/ros2_docker
 
     # Update
-    if [ "$PARSER_UPDATE" == "forced_update" ]
+    if [ "$PARSER_UPDATE" == "force-update" ]
     then
         CheckCurrentModule
         git submodule update --init --remote --recursive --force
         InstallScript
-    elif [ "$PARSER_UPDATE" == "preserved_update" ]
+    elif [ "$PARSER_UPDATE" == "preserve-update" ]
     then
         CheckCurrentModule
         cp codePack/$pack_name/launch/common.yaml common.yaml.tmp
