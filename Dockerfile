@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     python3-colcon-mixin \
     python3-rosdep \
     python3-vcstool \
+    nlohmann-json3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Script will automatically filled up the required packages under line 19
