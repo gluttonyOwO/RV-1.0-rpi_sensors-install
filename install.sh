@@ -342,7 +342,7 @@ InstallDocker()
     cat source_env.txt >> run.sh
     sudo chmod a+x run.sh
     # Add docker run process
-    echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
+    echo "sudo docker run -v ~/ros2_docker/codePack/$pack_name/launch/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml ~/ros2_docker/launch/qos:/ros2_ws/launch/qos --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
 
     # Install Dockerfile Process
     echo "Installing dockerfile..."
