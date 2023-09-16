@@ -17,7 +17,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Script will automatically filled up the required packages under line 19
-RUN apt-get update && apt-get install --no-install-recommends -y \
+ADD requirement_apt.txt /
+RUN apt-get update
+RUN apt-get install --no-install-recommends $(cat requirement_apt.txt) | xargs
 
 
 ADD requirement_pip.txt /
