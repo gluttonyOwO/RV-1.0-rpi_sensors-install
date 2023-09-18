@@ -309,6 +309,9 @@ InstallScript ()
         InstallDocker
     fi
 
+    # Check pwd
+    CheckTargetPath
+
     rm -rf requirement_apt.txt
     rm -rf requirement_pip.txt
     rm -rf source_env.txt
