@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Script will automatically filled up the required packages under line 19
 ADD requirement_apt.txt /
 RUN apt-get update
-RUN apt-get install --no-install-recommends $(cat requirement_apt.txt) | xargs
+RUN apt-get install --no-install-recommends -y $(cat requirement_apt.txt) | xargs
 
 
 ADD requirement_pip.txt /

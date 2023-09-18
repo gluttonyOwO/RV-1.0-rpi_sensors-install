@@ -527,8 +527,8 @@ PreparePackage ()
     echo "4) Ultrasound module (HC-SR04 sensors)"
     echo "5) Webcam module (based on OpenCV4)"
     echo "6) WebRTC module (GStreamer)"
-    echo "u) Update codePack (git control required)"
-    echo "r) Update codePack (git control required)"
+    echo "u) Update package (git control required)"
+    echo "r) Remove package"
     echo "q) Exit"
     echo "################################################"
     read -p "Enter number for module installation. Enter 'u' for package update, 'r' for package removal or 'q' to exit:" selectNum
