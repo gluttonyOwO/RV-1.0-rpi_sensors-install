@@ -258,45 +258,7 @@ InstallScript ()
         echo "Backup run.sh: run.sh.tmp"
     fi
 
-    if [ "$non_docker" == "TRUE" ]
-    then
-        InstallNonDocker
-    else
-        InstallDocker
-    fi
-}
-
-# Must have install.sh script located at $target_dir/codePack/$pack_name/install.sh
-InstallNonDocker()
-{
-    echo "===Install Process==="
-
-    # Check pwd
-    CheckTargetPath
-
-    rm -rf run.sh && ln codePack/$pack_name/run.sh run.sh
-    sudo chmod a+x run.sh
-
-    # Required environment installation and update
-    sudo apt update
-    sudo apt install python3 python3-dev python3-pip git curl -y
-
-    # Install the requirement files linked from each module's code pack
-    xargs sudo apt install < requirement_apt.txt
-    python3 -m pip install requirement_pip.txt
-
-    # Run install.sh script
-    sudo chmod a+x codePack/$pack_name/install.sh
-    ./codePack/$pack_name/install.sh $PWD/codePack/$pack_name
-}
-
-InstallDocker()
-{
-    echo "===Install Process==="
-
-    # Check pwd
-    CheckTargetPath
-
+    # Prevent non-exist files
     touch requirement_apt.txt
     touch requirement_pip.txt
     touch source_env.txt
@@ -330,6 +292,50 @@ InstallDocker()
 
     # Modify run.sh by adding specific $pack_name source_env.txt
     cat source_env.txt >> run.sh
+
+    # Required environment installation and update
+    sudo apt update
+    sudo apt install python3 python3-dev python3-pip git curl -y
+
+    # Install the requirement files linked from each module's code pack
+    xargs sudo apt install -y < requirement_apt.txt
+    python3 -m pip install -r requirement_pip.txt
+
+    # Start installation
+    if [ "$non_docker" == "TRUE" ]
+    then
+        InstallNonDocker
+    else
+        InstallDocker
+    fi
+
+    rm -rf requirement_apt.txt
+    rm -rf requirement_pip.txt
+    rm -rf source_env.txt
+}
+
+# Must have install.sh script located at $target_dir/codePack/$pack_name/install.sh
+InstallNonDocker()
+{
+    echo "===Install Process==="
+
+    # Check pwd
+    CheckTargetPath
+
+    # Run install.sh script
+    sudo chmod a+x codePack/$pack_name/install.sh
+    ./codePack/$pack_name/install.sh $PWD/codePack/$pack_name
+
+    cp $target_dir/codePack/$pack_name/run.sh $target_dir
+}
+
+InstallDocker()
+{
+    echo "===Install Process==="
+
+    # Check pwd
+    CheckTargetPath
+
     # Add docker run process
     echo "sudo docker run -v ~/ros2_docker/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml -v ~/ros2_docker/launch/qos:/ros2_ws/launch/qos --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
     sudo chmod a+x run.sh
@@ -339,10 +345,6 @@ InstallDocker()
 
     # Install Dockerfile Process
     echo "Installing dockerfile..."
-
-    # Required environment installation and update
-    sudo apt update
-    sudo apt install python3 python3-dev python3-pip git curl -y
 
     # Check Docker
     if [ -x "$(command -v docker)" ]; then
@@ -368,10 +370,6 @@ InstallDocker()
     
     # Dockerfile Installation
     sudo docker build -t ros2_docker .
-
-    rm -rf requirement_apt.txt
-    rm -rf requirement_pip.txt
-    rm -rf source_env.txt
 }
 
 # Create ros2_docker.desktop under /etc/xdg/autostart
@@ -612,6 +610,9 @@ PreparePackage ()
     fi
     echo "Static IP: $static_ip"
 
+    # Remove old package
+    Remove
+
     # Install package
     InstallScript # Return 0 if succeed
     if [[ $? -eq 0 ]]
@@ -624,9 +625,20 @@ PreparePackage ()
     fi
 }
 
+entry_pwd="$PWD"
+
 if [ "$PARSER_USED" == "TRUE" ]
 then
     CheckParser
 else
     PreparePackage
+fi
+
+if [ "$PWD" != "$entry_pwd" ]
+then
+    if ls $entry_pwd &> /dev/null
+    then
+        cd $entry_pwd
+        echo "Change directory: $PWD"
+    fi
 fi
