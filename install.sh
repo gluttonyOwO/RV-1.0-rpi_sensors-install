@@ -297,6 +297,19 @@ InstallScript ()
     sudo apt update
     sudo apt install python3 python3-dev python3-pip git curl -y
 
+    # Install vehicle_interface dependencies
+    if cat codePack/vehicle_interfaces/requirements_apt.txt &> /dev/null
+    then
+        echo " " >> requirement_apt.txt
+        cat codePack/vehicle_interfaces/requirements_apt.txt >> requirement_apt.txt
+    fi
+
+    if cat codePack/vehicle_interfaces/requirements_pip.txt &> /dev/null
+    then
+        echo " " >> requirement_pip.txt
+        cat codePack/vehicle_interfaces/requirements_pip.txt >> requirement_pip.txt
+    fi
+
     # Install the requirement files linked from each module's code pack
     xargs sudo apt install -y < requirement_apt.txt
     python3 -m pip install -r requirement_pip.txt
