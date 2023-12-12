@@ -7,7 +7,7 @@ PARSER_UPDATE="FALSE" # Update codePack, no install
 PARSER_INSTALL="FALSE" # Install program from codePack
 PARSER_UPGRADE="FALSE" # Upgrade installer
 
-preserve_conf="FALSE" # Preserve current common.yaml file while installing
+preserve_conf="FALSE" # Preserve current common.yaml and service.json file while installing
 pack_name="NONE"
 static_ip="NONE"
 interface="eth0"
@@ -18,7 +18,7 @@ non_docker="FALSE"
 # 1.    PARSER_REMOVE       remove program under ros2_ws and environment settings
 # 2.    PARSER_UPDATE       update codePack without installation
 # 3.    PARSER_INSTALL      install program from codePack to ros2_ws
-#       --preserve          preserve common.yaml under ros2_ws while installing
+#       --preserve          preserve common.yaml and service.json under ros2_ws while installing
 #       --interface         set network interface
 #       --ip                set static ip (not supported)
 
@@ -150,6 +150,7 @@ CheckParser ()
             mkdir -p ~/.ros2.tmp
             mv .module* ~/.ros2.tmp
             mv common.yaml ~/.ros2.tmp
+            mv service.json ~/.ros2.tmp
         fi
         cd $HOME
         sudo rm -rf "$target_dir"
@@ -312,10 +313,16 @@ InstallScript ()
         preserve_conf="FALSE"
     fi
 
-    # Copy new common.yaml to $target_dir if --preserve not set
+    if ! cat service.json &> /dev/null
+    then
+        preserve_conf="FALSE"
+    fi
+
+    # Copy new common.yaml and service.json to $target_dir if --preserve not set
     if [ "$preserve_conf" == "FALSE" ]
     then
         cp codePack/$pack_name/launch/common.yaml common.yaml
+        cp codePack/$pack_name/launch/service.json service.json
     fi
 
     # Modify run.sh by adding specific $pack_name source_env.txt
@@ -381,7 +388,7 @@ InstallDocker()
     CheckTargetPath
 
     # Add docker run process
-    echo "sudo docker run -v ~/ros2_docker/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml -v ~/ros2_docker/launch/qos:/ros2_ws/launch/qos --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
+    echo "sudo docker run -v ~/ros2_docker/common.yaml:/ros2_ws/install/$pack_name/share/$pack_name/launch/common.yaml -v ~/ros2_docker/service.json:/ros2_ws/install/$pack_name/share/$pack_name/launch/service.json -v ~/ros2_docker/launch/qos:/ros2_ws/launch/qos --rm --privileged --net host -it ros2_docker ros2 launch $pack_name launch.py" >> run.sh
     sudo chmod a+x run.sh
 
     ## Install Dockerfile
@@ -507,7 +514,7 @@ to grab git controlled directory."
     git submodule update --remote --recursive --force
 }
 
-# Remove common.yaml, .txt, .tmp, .module* files and /etc/xdg/autostart/ros2_docker.desktop
+# Remove common.yaml, service.json, .txt, .tmp, .module* files and /etc/xdg/autostart/ros2_docker.desktop
 Remove ()
 {
     echo "===Remove Process==="
@@ -520,6 +527,7 @@ Remove ()
     rm -rf requirement_pip.txt
     rm -rf source_env.txt
     rm -rf common.yaml
+    rm -rf service.json
     rm -rf ros2_docker.desktop.tmp
     rm -rf .module*
     
