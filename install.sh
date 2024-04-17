@@ -417,8 +417,10 @@ InstallDocker()
     fi
 
     # Modify Dockerfile by adding requirement list
-    echo "RUN . /opt/ros/\${ROS_DISTRO}/setup.sh && colcon build --packages-select $pack_name vehicle_interfaces" >> Dockerfile
-    
+    echo "RUN . /opt/ros/\${ROS_DISTRO}/setup.sh && colcon build --packages-select vehicle_interfaces" >> Dockerfile
+    echo "RUN . /opt/ros/\${ROS_DISTRO}/setup.sh && colcon build --packages-select vehicle_interfaces --cmake-args -DPYLIB=TRUE" >> Dockerfile
+    echo "RUN . /opt/ros/\${ROS_DISTRO}/setup.sh && colcon build --packages-select $pack_name" >> Dockerfile
+
     # Dockerfile Installation
     sudo docker build -t ros2_docker .
 }
