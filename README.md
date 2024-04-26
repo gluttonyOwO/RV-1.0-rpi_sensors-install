@@ -2,7 +2,7 @@
 
 Web version: https://hackmd.io/@cocobird231/BJidBuC6i
 
-*`Updated: 2023/09/18`*
+*`Updated: 2024/04/26`*
 
 :::warning
 **Guidance for hardware installation:** [rpi_sensors Hardware Installation](https://hackmd.io/@cocobird231/rkUS37lKc)
@@ -30,16 +30,10 @@ The package installer for sensor depends on Raspberry Pi 4. The ROS2 environment
 ## Usage
 
 ### For Newly Install (No `ros2_docker` Under Home Path)
-Run the pre-install script`get-rpi-sensors-install.sh` to grab git controlled SensorPack directory (renamed as `ros2_docker`). **Make sure Raspberry Pi 4 is connected to the internet before installation.** There are **two** ways to run the pre-install script: 
-
-1. **Run the pre-install script `get-rpi-sensors-install.sh` manually**
-    ```bash
-    . get-rpi-sensors-install.sh
-    ```
-2. **Run the pre-install script using `curl`**
-    ```bash
-    curl -fsSL ftp://61.220.23.239/rv-11/get-rpi-sensors-install.sh | bash
-    ```
+Run the pre-install script`get-rpi-sensors-install.sh` to grab git controlled SensorPack directory (renamed as `ros2_docker`). **Make sure Raspberry Pi 4 is connected to the internet before installation.**
+```bash
+curl -fsSL ftp://61.220.23.239/rv-12/get-rpi-sensors-install.sh | bash
+```
 The new directory `ros2_docker` will be created under `$HOME`.
 
 ### Module Installation
@@ -62,6 +56,7 @@ The new directory `ros2_docker` will be created under `$HOME`.
         - `.moduleinterface` (interface setting)
         - `.modulename` (IP setting)
         - `common.yaml` (copy from codePack package)
+        - `service.json` (copy from codePack package)
     - Under System Environment
         - `/boot/config.txt.tmp`
         - `/etc/dhcpcd.conf.tmp`
