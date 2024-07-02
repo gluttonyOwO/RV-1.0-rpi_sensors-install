@@ -17,9 +17,8 @@ jobs:
     - name: install the Docker 
       run: |
           set +e
-          brew install docker docker-buildx
-          docker --version
-          sudo dockerd
+          brew install colima
+          colima start
           docker build .
 
 
