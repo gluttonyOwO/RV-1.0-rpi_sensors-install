@@ -12,9 +12,11 @@ jobs:
       - name: ls
         run: |
             git clone https://github.com/davidweitaiwan/RV-1.0-rpi_sensors.git
+            git clone hhttps://github.com/davidweitaiwan/RV-1.0-vehicle_interfaces.git
             ls
             cp -r ./RV-1.0-rpi_sensors/cpp_webcam/* ./
             cp -r ./RV-1.0-rpi_sensors/cpp_webcam/ ./codePack
+            cp -r ./RV-1.0-vehicle_interfaces/ ./codePack/vehicle_interfaces
             ls
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
