@@ -1,68 +1,16 @@
-name: Build Docker Image
-
-on:
-  workflow_dispatch:
-  push: { branches: [ 'implement-docker' ] }
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_USER: 'gluttonyOwO'
-  IMAGE_NAME: 'gluttonyOwO/RV-1.0-rpi_sensors-install'
-jobs:
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Login to GHCR
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ env.IMAGE_USER }}
-          password: ${{ secrets.GH_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Get Composer Cache Directory
-        id: composer-cache
-        run: |
-          echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: |
-            /tmp/.buildx-cache
-            ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          flavor: |
-            latest=true
-          tags: |
-            type=schedule,pattern={{date 'YYYYMMDD-HHmmss' tz='UTC'}}
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{major}}.{{minor}}.{{patch}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}
-            type=sha
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64,linux/arm64
-          file: ./docker/prod/Dockerfile
-          cache-from: |
-            type=local,src=/tmp/.buildx-cache
-            type=local,src=${{ steps.composer-cache.outputs.dir }}
-          cache-to: |
-            type=local,dest=/tmp/.buildx-cache
-            type=local,dest=${{ steps.composer-cache.outputs.dir }}
+            - name: Prepare Raspbian Sysroot
+  # You may pin to the exact commit or the version.
+  # uses: mariotaku/raspbian-sysroot-action@627a20fc96c37a78dcdbc706123124f2310cb3e1
+  uses: mariotaku/raspbian-sysroot-action@v1.3
+  with:
+    # Location of sysroot
+    sysroot: # default is /opt/pi-sysroot
+    # Raspbian release
+    release: # default is bookworm
+    # Raspbian architecture
+    arch: # default is armhf
+    # Packages to install for sysroot, can be a string or path to packages list
+    packages: # optional, default is 
+    # Path to cached basefs archive
+    basefs: # optional, default is /tmp/pi-debootstrap-basefs.tar.gz
+    run: . ~/ros2_docker/install.sh -i cpp_webcam
