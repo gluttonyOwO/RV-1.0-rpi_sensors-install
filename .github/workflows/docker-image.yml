@@ -19,8 +19,7 @@ jobs:
           set +e
           brew install docker docker-buildx
           docker --version
-          echo "FROM ubuntu:latest" > Dockerfile
-          docker build --no-cache -t test .
+          sudo dockerd
+          docker build .
 
-    - name: Build the Docker image
-      run: docker build .
+
