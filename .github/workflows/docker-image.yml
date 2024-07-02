@@ -18,7 +18,7 @@ jobs:
       run: |
           set +e
           brew install docker
-          launchctl enable docker
+          open /Applications/Docker.app
           docker build .
 
 
