@@ -6,9 +6,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_USER: your_username
-  IMAGE_NAME: your_username/project_name
-
+  IMAGE_USER: 'gluttonyOwO'
+  IMAGE_NAME: 'gluttonyOwO/RV-1.0-rpi_sensors-install'
 jobs:
   docker:
     runs-on: ubuntu-latest
