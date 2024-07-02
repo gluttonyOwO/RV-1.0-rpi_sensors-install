@@ -18,7 +18,7 @@ jobs:
       run: |
           set +e
           brew install docker
-          systemctl enable docker
+          launchctl enable docker
           docker build .
 
 
