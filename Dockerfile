@@ -49,4 +49,4 @@ RUN mkdir -p ros2_ws/launch/qos
 COPY codePack/ /ros2_ws/src/
 WORKDIR /ros2_ws
 
-#RUN . /opt/ros/${ROS_DISTRO}/setup.sh && colcon build
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && colcon build
