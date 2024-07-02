@@ -10,7 +10,7 @@ jobs:
         run: |
             git clone https://github.com/davidweitaiwan/RV-1.0-rpi_sensors.git
             ls
-            cp -r ./RV-1.0-rpi_sensors/cpp_webcam ./
+            cp -r ./RV-1.0-rpi_sensors/cpp_webcam/ ./
             ls
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
