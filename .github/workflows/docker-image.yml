@@ -1,6 +1,9 @@
 name: Deploy Production
 on:
-  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 jobs:
   build-and-push-docker:
     runs-on: ubuntu-latest
