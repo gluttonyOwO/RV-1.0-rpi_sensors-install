@@ -17,6 +17,7 @@ jobs:
     - name: install the Docker 
       run: |
           set +e
+          export DOCKER_HOST=unix://${HOME}/.colima/default/docker.sock
           brew install colima
           brew install docker
           colima start
