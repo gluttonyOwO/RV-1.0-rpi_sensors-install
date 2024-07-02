@@ -42,7 +42,7 @@ jobs:
         id: extract
         with:
           image: gluttony/cpp_webcam:${{ github.run_number }}
-          path: /app/.
+          path: /bin/bash/.
           destination: dist
       - name: Upload Dist
         uses: actions/upload-artifact@v3
