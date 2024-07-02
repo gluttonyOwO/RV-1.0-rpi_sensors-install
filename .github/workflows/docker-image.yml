@@ -27,12 +27,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: False
+          load: true
           tags: gluttony/cpp_webcam:${{ github.run_number }}
           platforms: linux/amd64,linux/arm64/v8
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
+          
+      - uses: shrink/actions-docker-extract@v3
+        id: extract
+        with:
+          image: gluttony/cpp_webcam:${{ github.run_number }}
+          path: /app/.
+          destination: dist
+      - name: Upload Dist
+        uses: actions/upload-artifact@v3
+        with:
+          path: dist
