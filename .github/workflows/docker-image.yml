@@ -14,5 +14,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: install the Docker 
+      run: |
+          set +e
+          brew install docker docker-buildx
+          docker --version
+          echo "FROM ubuntu:latest" > Dockerfile
+          docker build --no-cache -t test .
+
     - name: Build the Docker image
-      run: docker build ./RV-1.0-rpi_sensors-install
+      run: docker build .
